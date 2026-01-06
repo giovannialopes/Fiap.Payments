@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Payments.Domain.Entities;
 using Payments.Domain.Enum;
-using Payments.Domain.Event;
+using Games.Domain.Queue.Event;
 using Payments.Domain.Repositories;
 using Payments.Infrastructure.Data;
 using System.Threading;

@@ -6,7 +6,7 @@ namespace Payments.Domain.Shared.Http;
 
 public static class Users
 {
-    private const string _HOST = "https://users-api-fiap-f5eraydvfqatejb8.brazilsouth-01.azurewebsites.net/api/v1";
+    private const string _HOST = "https://localhost:7205/api/v1";
 
 
     public static CarteiraDto.CarteiraDtoResponse PegaSaldo(Guid perfilId) {

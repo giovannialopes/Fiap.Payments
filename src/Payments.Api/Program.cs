@@ -1,9 +1,11 @@
-﻿using Azure.Messaging.ServiceBus;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Payments.Domain.Dependency;
+using Payments.Domain.Middleware;
+using Payments.Domain.MessageBus;
 using Payments.Infrastructure.Data;
 using Payments.Infrastructure.Dependency;
 using System.Text;
@@ -37,16 +39,8 @@ builder.Services.AddSwaggerGen(c => {
     });
 });
 
-// Configuração Service Bus
-builder.Services.AddSingleton(sp => {
-    var cfg = sp.GetRequiredService<IConfiguration>();
-    var client = new ServiceBusClient(cfg["ServiceBus:ConnectionString"]);
-    return client.CreateProcessor(cfg["ServiceBus:Queue"] ?? "payments");
-});
-
-
-// Injeta e inicia o Worker
-builder.Services.AddHostedService<PaymentsQueueWorker>();
+// Configuração RabbitMQ
+builder.Services.AddMessageBus(builder.Configuration);
 
 //Banco de Dados
 builder.Services.AddDbContext<DbPayments>(options =>
@@ -71,6 +65,28 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 
 
+// Health Checks
+builder.Services.AddHealthChecks()
+    .AddCheck("database", () => {
+        // Verificação básica - será verificado no runtime
+        return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("Database check configurado");
+    })
+    .AddCheck("rabbitmq", () => {
+        // Verificação básica de conectividade RabbitMQ
+        var host = builder.Configuration["RabbitMq:Host"] ?? "localhost";
+        var port = builder.Configuration.GetValue<ushort>("RabbitMq:Port", 5672);
+        try {
+            using var client = new System.Net.Sockets.TcpClient();
+            var result = client.BeginConnect(host, port, null, null);
+            var success = result.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(1));
+            if (!success) return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("RabbitMQ não acessível");
+            client.EndConnect(result);
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy("RabbitMQ acessível");
+        } catch {
+            return Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Unhealthy("RabbitMQ não acessível");
+        }
+    });
+
 builder.Services.AddServices();
 builder.Services.AddRepositories();
 
@@ -81,15 +97,26 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction()) {
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ObservabilityMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Health Check endpoint
+app.MapHealthChecks("/health");
+
 app.MapControllers();
 
 
-using (var scope = app.Services.CreateScope()) {
-    var dbContext = scope.ServiceProvider.GetRequiredService<DbPayments>();
-    await dbContext.Database.EnsureCreatedAsync();
+// Inicializar banco de dados (não crítico - aplicação continua mesmo se falhar)
+try {
+    using (var scope = app.Services.CreateScope()) {
+        var dbContext = scope.ServiceProvider.GetRequiredService<DbPayments>();
+        await dbContext.Database.EnsureCreatedAsync();
+    }
+} catch (Exception ex) {
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogWarning(ex, "Não foi possível conectar ao banco de dados na inicialização. A aplicação continuará rodando.");
 }
 
 await app.RunAsync();

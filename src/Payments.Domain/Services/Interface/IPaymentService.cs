@@ -1,5 +1,5 @@
 ﻿using Payments.Domain.DTO;
-using Payments.Domain.Event;
+using Games.Domain.Queue.Event;
 using Payments.Domain.Results;
 using Payments.Domain.Shared.Http.Dto;
 

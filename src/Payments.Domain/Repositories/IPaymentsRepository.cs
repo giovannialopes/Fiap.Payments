@@ -1,6 +1,6 @@
 ﻿using Payments.Domain.Entities;
 using Payments.Domain.Enum;
-using Payments.Domain.Event;
+using Games.Domain.Queue.Event;
 
 namespace Payments.Domain.Repositories;
 

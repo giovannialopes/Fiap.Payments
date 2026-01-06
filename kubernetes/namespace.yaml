@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fiap-cloud-payments
+  labels:
+    name: fiap-cloud-payments
+    environment: production
+

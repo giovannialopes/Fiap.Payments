@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-service
+  namespace: fiap-cloud-payments
+  labels:
+    app: payments
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: payments
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+

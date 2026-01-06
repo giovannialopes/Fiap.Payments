@@ -1,4 +1,4 @@
-﻿namespace Payments.Domain.Event;
+﻿namespace Games.Domain.Queue.Event;
 
 public record PaymentCreatedEvent(
 Guid JogoId,
