@@ -25,4 +25,10 @@
     <ProjectReference Include="..\Payments.Infrastructure\Payments.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- Exclui o worker de Azure Service Bus do build (não utilizado neste projeto com RabbitMQ) -->
+  <ItemGroup>
+    <Compile Remove="PaymentsQueueWorker.cs" />
+    <None Include="PaymentsQueueWorker.cs" />
+  </ItemGroup>
+
 </Project>
